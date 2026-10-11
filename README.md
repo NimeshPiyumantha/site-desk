@@ -11,6 +11,7 @@ It is a working demonstration of the journey asked for in the assignment:
 |---|---|
 | **Source code** | <https://github.com/NimeshPiyumantha/site-desk> |
 | **Hosted demo** | <https://site-desk-psi.vercel.app/app> — sign in with any demo person below |
+| **How it was built** | [WORKFLOW.md](WORKFLOW.md) — decisions, the bugs found, and the before-and-after numbers for each fix |
 
 > **Either link runs the whole journey.** The hosted copy keeps its data in a shared Postgres, so
 > edits, publishes, backups and uploaded pictures all persist there — follow §3 against it or
