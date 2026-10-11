@@ -1,6 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
 import { UPLOAD_DIR } from "@/server/db";
+import * as repo from "@/server/repo";
+
+export const dynamic = "force-dynamic";
 
 const TYPES: Record<string, string> = { jpg: "image/jpeg", png: "image/png", webp: "image/webp", gif: "image/gif", svg: "image/svg+xml" };
 
@@ -32,12 +35,28 @@ function placeholder() {
   });
 }
 
-/** Serves uploaded pictures. File names are random UUIDs and never change, so they cache forever. */
+const served = (bytes: Buffer, mime: string) =>
+  new Response(new Uint8Array(bytes), {
+    headers: {
+      "Content-Type": mime,
+      // Names are random UUIDs and never reused, so a picture can cache forever.
+      "Cache-Control": "public, max-age=31536000, immutable",
+      "Content-Security-Policy": "script-src 'none'",
+    },
+  });
+
+/** Serves uploaded pictures, from the database first and then from disk for older local files. */
 export async function GET(_: Request, { params }: { params: Promise<{ file: string }> }) {
   const { file } = await params;
   const name = path.basename(file);
-  const full = path.join(UPLOAD_DIR, name);
-  if (!fs.existsSync(full)) return placeholder();
   const ext = name.split(".").pop() ?? "";
-  return new Response(fs.readFileSync(full), { headers: { "Content-Type": TYPES[ext] ?? "application/octet-stream", "Cache-Control": "public, max-age=31536000, immutable", "Content-Security-Policy": "script-src 'none'" } });
+
+  const row = await repo.getUpload(name);
+  if (row) return served(row.bytes, row.mime || TYPES[ext] || "application/octet-stream");
+
+  // Pictures uploaded before they were kept in the database still sit in the data directory.
+  const full = path.join(UPLOAD_DIR, name);
+  if (fs.existsSync(full)) return served(fs.readFileSync(full), TYPES[ext] ?? "application/octet-stream");
+
+  return placeholder();
 }

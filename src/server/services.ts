@@ -129,7 +129,7 @@ export async function publishSite(actor: Actor, siteId: string, opts: PublishOpt
     const summary = opts.summaryOverride ?? (live ? summaryLine(changes) : `First launch in ${formatLanguageList(next.settings.languages.filter((l) => l.public).map((l) => l.id))}`);
 
     // Step 2: hosting / deployment. Failures here are recorded and the live site is untouched.
-    const failure = deployCheck(site, next);
+    const failure = await deployCheck(site, next);
     if (failure) {
       const releaseId = newId("rel");
       await repo.insertRelease({ id: releaseId, site_id: site.id, number: null, status: "failed", snapshot: JSON.stringify(next), changes: JSON.stringify(changes), summary, note: opts.note ?? "", source: opts.source ?? "publish", change_set_id: opts.changeSetId ?? null, error: JSON.stringify(failure), author_id: actor.id });
@@ -157,7 +157,7 @@ export async function publishSite(actor: Actor, siteId: string, opts: PublishOpt
 }
 
 /** Simulated hosting step. Real deployment would upload files / invalidate a CDN here. */
-function deployCheck(site: repo.SiteRow, next: SiteContent): repo.ReleaseError | null {
+async function deployCheck(site: repo.SiteRow, next: SiteContent): Promise<repo.ReleaseError | null> {
   if (site.simulate_failure) {
     return {
       step: "Uploading to the web host",
@@ -166,13 +166,14 @@ function deployCheck(site: repo.SiteRow, next: SiteContent): repo.ReleaseError |
     };
   }
   const images = Object.values(flatten(next)).filter((v): v is string => typeof v === "string" && v.startsWith("/media/"));
-  // Where uploads sit on a per-instance temporary disk, the instance running this check is often
-  // not the one that stored the file, so its absence says nothing about the picture really being
-  // gone and would fail launches that are fine. Only a durable disk can answer this.
-  const storageIsDurable = !process.env.VERCEL;
-  const missing = storageIsDurable
-    ? images.filter((src) => !fs.existsSync(path.join(UPLOAD_DIR, path.basename(src))))
-    : [];
+  // Uploaded pictures are kept in the database, which every copy of the app shares, so this check
+  // is meaningful everywhere. A file still on disk from before that change also counts.
+  const names = images.map((src) => path.basename(src));
+  const stored = await repo.knownUploads(names);
+  const missing = images.filter((src) => {
+    const name = path.basename(src);
+    return !stored.has(name) && !fs.existsSync(path.join(UPLOAD_DIR, name));
+  });
   if (missing.length) {
     return {
       step: "Preparing pictures",
@@ -490,7 +491,7 @@ const MEDIA_NAME_RE = /^[A-Za-z0-9._-]+\.(jpe?g|png|webp|gif|svg)$/i;
 const MAX_PACKAGE_FILE = 6 * 1024 * 1024;
 
 /** The uploaded pictures a package needs, as file name → base64. */
-function readPackageFiles(contents: Array<SiteContent | null>): Record<string, string> {
+async function readPackageFiles(contents: Array<SiteContent | null>): Promise<Record<string, string>> {
   const names = new Set<string>();
   for (const content of contents) {
     if (!content) continue;
@@ -501,11 +502,17 @@ function readPackageFiles(contents: Array<SiteContent | null>): Record<string, s
   const out: Record<string, string> = {};
   for (const name of names) {
     if (!MEDIA_NAME_RE.test(name)) continue;
+    const row = await repo.getUpload(name);
+    if (row) {
+      if (row.bytes.byteLength <= MAX_PACKAGE_FILE) out[name] = row.bytes.toString("base64");
+      continue;
+    }
     try {
+      // A picture from before they were kept in the database.
       const bytes = fs.readFileSync(path.join(UPLOAD_DIR, name));
       if (bytes.byteLength <= MAX_PACKAGE_FILE) out[name] = bytes.toString("base64");
     } catch {
-      // Not on this disk. The website still imports; that picture arrives as a placeholder.
+      // Nowhere to be found. The website still imports; that picture arrives as a placeholder.
     }
   }
   return out;
@@ -518,15 +525,18 @@ function readPackageFiles(contents: Array<SiteContent | null>): Record<string, s
  * anything carrying a directory, or any other kind of file, is ignored rather than trusted. An
  * existing file is never overwritten: names are UUIDs, so a match is already the same picture.
  */
-function writePackageFiles(files: Record<string, string> | undefined) {
+const MIME_BY_EXT: Record<string, string> = { jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", webp: "image/webp", gif: "image/gif", svg: "image/svg+xml" };
+
+async function writePackageFiles(files: Record<string, string> | undefined) {
   if (!files) return;
-  fs.mkdirSync(UPLOAD_DIR, { recursive: true });
   for (const [givenName, base64] of Object.entries(files)) {
     if (givenName !== path.basename(givenName) || !MEDIA_NAME_RE.test(givenName)) continue;
     const bytes = Buffer.from(base64, "base64");
     if (!bytes.byteLength || bytes.byteLength > MAX_PACKAGE_FILE) continue;
-    const full = path.join(UPLOAD_DIR, givenName);
-    if (!fs.existsSync(full)) fs.writeFileSync(full, bytes);
+    const ext = givenName.split(".").pop()?.toLowerCase() ?? "";
+    // Into the database, where every copy of the app can serve it. ON CONFLICT DO NOTHING in
+    // putUpload keeps an existing picture: the name is a UUID, so a match is the same picture.
+    await repo.putUpload(givenName, MIME_BY_EXT[ext] ?? "application/octet-stream", bytes);
   }
 }
 
@@ -535,7 +545,7 @@ export async function exportPackage(actor: Actor, siteId: string, opts: { includ
   const { content: draft } = await repo.getDraft(site.id);
   const live = (await repo.getLiveRelease(site))?.content ?? null;
   await repo.audit(actor.id, site, "transfer.export", `Website package downloaded${opts.includeContact ? " (with contact details)" : ""}`);
-  const pkg = buildPackage({ name: site.name, slug: site.slug }, draft, live, opts, readPackageFiles([draft, live]));
+  const pkg = buildPackage({ name: site.name, slug: site.slug }, draft, live, opts, await readPackageFiles([draft, live]));
   return { fileName: `${site.slug}.sitedesk.json`, json: JSON.stringify(pkg, null, 2) };
 }
 
@@ -546,7 +556,7 @@ export async function importPackage(actor: Actor, text: string, target: { worksp
   const { pkg } = parsed;
   // Before the transaction: the pictures are files, so they are not part of it, and a website
   // whose import then fails only leaves unreferenced bytes behind.
-  writePackageFiles(pkg.files);
+  await writePackageFiles(pkg.files);
   return tx(async () => {
     let clientId = target.clientId;
     if (target.newClientName?.trim()) clientId = (await repo.createClient(target.workspaceId, target.newClientName.trim())).id;

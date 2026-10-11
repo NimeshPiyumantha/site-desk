@@ -10,16 +10,13 @@ It is a working demonstration of the journey asked for in the assignment:
 | | |
 |---|---|
 | **Source code** | <https://github.com/NimeshPiyumantha/site-desk> |
-| **Hosted demo** | <https://site-desk-psi.vercel.app/app> — a quick look only; read the note below |
+| **Hosted demo** | <https://site-desk-psi.vercel.app/app> — sign in with any demo person below |
 
-> **Run it locally for the real demo.** Signing in, browsing the websites and the public pages all
-> work on the hosted link, but **saved edits do not stick there**: it runs on a serverless host that
-> spreads requests over instances with separate temporary disks, so an edit is only visible to the
-> instance that stored it — measured at one page load in six. The demonstration script in §3 needs
-> each step to keep what the previous one did, so follow it on a local run
-> ([§1](#1-run-it-about-2-minutes), two commands) or on a host with a disk
-> ([§1](#hosting-it-so-the-whole-journey-works), `Dockerfile` and `fly.toml` included), where the
-> whole journey works.
+> **Either link runs the whole journey.** The hosted copy keeps its data in a shared Postgres, so
+> edits, publishes, backups and uploaded pictures all persist there — follow §3 against it or
+> against a local run, whichever you prefer. Running locally needs nothing but Node: no database
+> server, no account, no keys. It is also the same demo data, so anything an earlier visitor left
+> behind on the hosted copy is not in your way.
 
 **Where to start:** [§1 Run it](#1-run-it-about-2-minutes) (two commands, demo accounts, example
 content) → [§3 Demonstration script](#3-demonstration-script-follow-without-a-walkthrough) (click-by-click,
@@ -292,7 +289,7 @@ Each step lists where to click. The **? Help** button (top right) always shows h
 | One set of SQL | Queries are written once in SQLite's style (`?` and `@name`) and the Postgres driver rewrites them to `$1 … $n` (`src/server/sql.ts`). Nested transactions use savepoints in both. | Two dialects of the same query drift apart; one does not. |
 | Staying signed in | Sessions are signed with a secret every copy of the app has to share. Locally that is a file in the data directory, so a restart keeps you signed in. On a serverless host, where instances do not share a disk, it is fixed during the build — so sessions end when a new deployment replaces the old one. Set **`SITEDESK_SECRET`** to pin it and they survive deployments. | A secret generated per instance means each instance rejects the others' sessions, which signs people out part-way through. |
 | Translations | CSV (opens in Excel / Google Sheets) generated from the site, or JSON. Rows matched by key; without a key, by unique main-language text. Main language is never overwritten by an import. | Clients work in spreadsheets; matching by key guarantees “correct page and correct place”. |
-| Pictures | Demo pictures are local SVG illustrations (works offline). Uploads (JPG/PNG/WebP/GIF/SVG, ≤6 MB) are stored in `data/uploads`. | No external dependencies for the reviewer. |
+| Pictures | Demo pictures are local SVG illustrations (works offline). Uploads (JPG/PNG/WebP/GIF/SVG, ≤6 MB) are stored **in the database**, next to the content that refers to them, and served from `/media/<id>`. | Every copy of the app can then serve them. On a filesystem they lived on one machine's disk, so a second copy answered with a placeholder, and they also did not travel in a transfer package. |
 
 ## 5. What works, what is simulated, what is incomplete
 
@@ -300,7 +297,7 @@ Each step lists where to click. The **? Help** button (top right) always shows h
 
 **Simulated:**
 * **Hosting / deployment.** The public site is served from the same app. The “upload to web host” step is simulated; a failure can be forced from *Settings → Demo*. A missing uploaded picture also fails the launch for real.
-* **Saving on the hosted demo.** <https://site-desk-psi.vercel.app/app> runs this same code, but a serverless host gives it no durable disk and spreads requests over instances that each get their own `/tmp`. Signing in, browsing and the public pages work; a saved edit is only visible to the instance that stored it, which measured as one page load in six, and nothing survives a cold start. A missing uploaded picture shows a placeholder instead of a broken image, and the launch check skips its “are the pictures there?” step, because on that host an absent file means nothing. **The fix is a disk, not a rewrite:** the same code runs the whole journey on any container host with a volume — see [§1](#hosting-it-so-the-whole-journey-works). Keeping it on a serverless host instead would mean moving the database to a hosted service and uploads to object storage, which turns ~110 synchronous functions in `src/server/` async, merge and publish logic included.
+* **Nothing, once there is a database to share.** <https://site-desk-psi.vercel.app/app> runs the whole journey, because `DATABASE_URL` points it at a hosted Postgres that every instance reads and writes. Edits, publishes, backups, restores and uploaded pictures all persist. Without that variable the same code falls back to a SQLite file, which on a serverless host lands in a per-instance `/tmp` — and then a saved edit is only visible to the instance that stored it (measured at one page load in six) and nothing outlives a cold start. Two things make the hosted copy work and are easy to miss: `SITEDESK_SECRET`, or else instances disagree about sessions and sign people out, and uploaded pictures living in the database rather than on disk.
 * **Sign-in.** Email + password demo accounts with a signed session cookie. No password reset, SSO or 2FA.
 * **Custom domains.** Websites live under `/s/<address>`; real domains (e.g. `summerescape.lk`) are not mapped.
 

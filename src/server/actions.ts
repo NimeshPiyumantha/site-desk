@@ -88,8 +88,9 @@ export async function uploadImageAction(form: FormData): Promise<{ ok: true; url
   if (!ext) return { ok: false, error: "Please choose a JPG, PNG, WebP, GIF or SVG picture." };
   if (file.size > 6 * 1024 * 1024) return { ok: false, error: "The picture is larger than 6 MB. Please choose a smaller one." };
   const name = `${crypto.randomUUID()}.${ext}`;
-  fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-  fs.writeFileSync(path.join(UPLOAD_DIR, name), Buffer.from(await file.arrayBuffer()));
+  // Stored in the database, not on this machine's disk: a serverless host gives every instance its
+  // own temporary disk, so a file written here would be invisible to the instance asked for it.
+  await repo.putUpload(name, file.type, Buffer.from(await file.arrayBuffer()));
   return { ok: true, url: `/media/${name}` };
 }
 

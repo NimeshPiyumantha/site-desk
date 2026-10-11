@@ -75,14 +75,21 @@ CREATE TABLE IF NOT EXISTS audit_log (
 CREATE TABLE IF NOT EXISTS presence (
   site_id TEXT NOT NULL, user_id TEXT NOT NULL, last_seen TEXT NOT NULL, PRIMARY KEY (site_id, user_id)
 );
+-- Uploaded pictures live with the content rather than on one machine's disk, so every copy of the
+-- app can serve them. Names are UUIDs, so a name is never reused.
+CREATE TABLE IF NOT EXISTS uploads (
+  name TEXT PRIMARY KEY, mime TEXT NOT NULL, bytes BLOB NOT NULL, created_at TEXT NOT NULL
+);
 CREATE INDEX IF NOT EXISTS idx_releases_site ON releases(site_id, number);
 CREATE INDEX IF NOT EXISTS idx_audit_site ON audit_log(site_id, at);
 `;
 
-/** The one construct above that is not already valid in both dialects. */
+/** The two constructs above that are not already valid in both dialects. */
 function schemaFor(dialect: "sqlite" | "postgres"): string {
   return dialect === "postgres"
-    ? SCHEMA.replace("id INTEGER PRIMARY KEY AUTOINCREMENT", "id BIGSERIAL PRIMARY KEY")
+    ? SCHEMA
+        .replace("id INTEGER PRIMARY KEY AUTOINCREMENT", "id BIGSERIAL PRIMARY KEY")
+        .replace("bytes BLOB NOT NULL", "bytes BYTEA NOT NULL")
     : SCHEMA;
 }
 

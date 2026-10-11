@@ -224,6 +224,32 @@ export async function listAudit(clientIds: string[], siteId?: string, limit = 10
   return c.all<AuditRow>(`SELECT * FROM audit_log WHERE ${where} ORDER BY id DESC LIMIT ?`, [...clientIds, limit]);
 }
 
+// ---------- uploaded pictures ----------
+export interface UploadRow { name: string; mime: string; bytes: Buffer; created_at: string }
+
+export async function putUpload(name: string, mime: string, bytes: Buffer) {
+  await (await conn()).run(
+    "INSERT INTO uploads (name, mime, bytes, created_at) VALUES (?, ?, ?, ?) ON CONFLICT(name) DO NOTHING",
+    [name, mime, bytes, now()],
+  );
+}
+
+export async function getUpload(name: string): Promise<UploadRow | undefined> {
+  const row = await (await conn()).get<UploadRow>("SELECT name, mime, bytes, created_at FROM uploads WHERE name = ?", [name]);
+  // SQLite hands back a Uint8Array; Postgres a Buffer. Normalise, so callers get one shape.
+  return row ? { ...row, bytes: Buffer.isBuffer(row.bytes) ? row.bytes : Buffer.from(row.bytes as unknown as Uint8Array) } : undefined;
+}
+
+/** Which of these pictures the database holds – used by the launch checks. */
+export async function knownUploads(names: string[]): Promise<Set<string>> {
+  if (!names.length) return new Set();
+  const rows = await (await conn()).all<{ name: string }>(
+    `SELECT name FROM uploads WHERE name IN (${names.map(() => "?").join(",")})`,
+    names,
+  );
+  return new Set(rows.map((r) => r.name));
+}
+
 // ---------- presence ----------
 export async function touchPresence(siteId: string, userId: string) {
   await (await conn()).run("INSERT INTO presence (site_id, user_id, last_seen) VALUES (?, ?, ?) ON CONFLICT(site_id, user_id) DO UPDATE SET last_seen = excluded.last_seen", [siteId, userId, now()]);
