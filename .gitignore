@@ -1,0 +1,9 @@
+node_modules
+.next
+data/*.db*
+data/uploads
+data/.secret
+test-results
+playwright-report
+*.tsbuildinfo
+next-env.d.ts

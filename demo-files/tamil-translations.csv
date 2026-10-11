@@ -1,0 +1,45 @@
+﻿key,page,section,what this text is,en,ta
+seo.title,Every page,Search engines (Google),Search engines (Google) › Page title in Google,Hill Country Tea Tours – Tea estate stays and scenic train trips,ஹில் கண்ட்ரி டீ டூர்ஸ் – தேயிலைத் தோட்டத் தங்குமிடங்களும் அழகிய ரயில் பயணங்களும்
+seo.description,Every page,Search engines (Google),Search engines (Google) › Short description in Google,"Small-group tours through Sri Lanka’s tea country: bungalow stays, waterfall hikes and the scenic train to Ella.","இலங்கையின் தேயிலை நாட்டில் சிறு குழுச் சுற்றுலாக்கள்: பங்களா தங்குமிடங்கள், நீர்வீழ்ச்சி நடைகள் மற்றும் எல்லவுக்கான அழகிய ரயில் பயணம்."
+nav.destinations,Every page,Menu,Menu › Menu: Destinations,Tours,சுற்றுலாக்கள்
+nav.offers,Every page,Menu,Menu › Menu: Offers,Offers,சலுகைகள்
+nav.about,Every page,Menu,Menu › Menu: About,About,எங்களைப் பற்றி
+nav.contact,Every page,Menu,Menu › Menu: Contact,Contact,தொடர்பு
+nav.planTrip,Every page,Menu,Menu › Menu button,Plan my trip,என் பயணத்தைத் திட்டமிடு
+hero.title,Home page,Top banner,Top banner › Main headline,Wake up above the clouds.,மேகங்களுக்கு மேலே கண் விழியுங்கள்.
+hero.subtitle,Home page,Top banner,Top banner › Text under the headline,"Tea estate bungalows, misty mountain trails and the famous scenic train to Ella.","தேயிலைத் தோட்டப் பங்களாக்கள், பனி மூடிய மலைப் பாதைகள் மற்றும் எல்லவுக்கான புகழ்பெற்ற அழகிய ரயில்."
+hero.primaryCta,Home page,Top banner,Top banner › First button,See the tours,சுற்றுலாக்களைப் பாருங்கள்
+hero.secondaryCta,Home page,Top banner,Top banner › Second button,View winter offers,குளிர்காலச் சலுகைகளைப் பாருங்கள்
+banner.text,Home page,Offer strip,Offer strip › Strip text,Winter offer: a free tea tasting with every 3-night stay,குளிர்காலச் சலுகை: ஒவ்வொரு 3 இரவுத் தங்குதலுக்கும் இலவச தேநீர் சுவைப்பு
+banner.linkText,Home page,Offer strip,Offer strip › Strip link text,See offers,சலுகைகளைப் பாருங்கள்
+categories.heading,Home page,Getaway types,Getaway types › Section heading,Choose your hill-country trip,உங்கள் மலைநாட்டுப் பயணத்தைத் தேர்ந்தெடுங்கள்
+categories.items.@tea-stays.title,Home page,Getaway types,Getaway types › Tea estate stays › Card title,Tea estate stays,தேயிலைத் தோட்டத் தங்குமிடங்கள்
+categories.items.@tea-stays.text,Home page,Getaway types,Getaway types › Tea estate stays › Card text,Colonial bungalows among the tea bushes.,தேயிலைச் செடிகளுக்கு இடையே காலனித்துவப் பங்களாக்கள்.
+categories.items.@rail.title,Home page,Getaway types,Getaway types › Scenic rail journeys › Card title,Scenic rail journeys,அழகிய ரயில் பயணங்கள்
+categories.items.@rail.text,Home page,Getaway types,Getaway types › Scenic rail journeys › Card text,The blue train through the mountains.,மலைகளின் ஊடே செல்லும் நீல ரயில்.
+categories.items.@waterfalls.title,Home page,Getaway types,Getaway types › Waterfall hikes › Card title,Waterfall hikes,நீர்வீழ்ச்சி நடைகள்
+categories.items.@waterfalls.text,Home page,Getaway types,Getaway types › Waterfall hikes › Card text,Easy trails to the island’s finest falls.,தீவின் மிகச் சிறந்த நீர்வீழ்ச்சிகளுக்கு எளிதான பாதைகள்.
+offers.heading,Home page,Offers,Offers › Section heading,Winter offers,குளிர்காலச் சலுகைகள்
+offers.intro,Home page,Offers,Offers › Section introduction,Small-group tours with a local guide. Prices include meals and transport from Kandy.,உள்ளூர் வழிகாட்டியுடன் சிறு குழுச் சுற்றுலாக்கள். விலைகளில் உணவும் கண்டியிலிருந்து போக்குவரத்தும் அடங்கும்.
+offers.bookButton,Home page,Offers,Offers › Offer button text,Ask about this tour,இந்தச் சுற்றுலா பற்றிக் கேளுங்கள்
+offers.items.@tea-trail.title,Home page,Offers,Offers › Tea Trail Weekend › Offer name,Tea Trail Weekend,தேயிலைப் பாதை வார இறுதி
+offers.items.@tea-trail.description,Home page,Offers,Offers › Tea Trail Weekend › Offer description,2 nights in a tea planter’s bungalow with a factory visit and guided tasting.,தொழிற்சாலைப் பார்வை மற்றும் வழிகாட்டப்பட்ட சுவைப்புடன் தேயிலைத் தோட்டக்காரரின் பங்களாவில் 2 இரவுகள்.
+offers.items.@tea-trail.price,Home page,Offers,Offers › Tea Trail Weekend › Price,"LKR 38,000 per person","ஒருவருக்கு ரூ. 38,000"
+offers.items.@rail-ella.title,Home page,Offers,Offers › Kandy to Ella by Train › Offer name,Kandy to Ella by Train,கண்டியிலிருந்து எல்லவுக்கு ரயிலில்
+offers.items.@rail-ella.description,Home page,Offers,Offers › Kandy to Ella by Train › Offer description,"Reserved observation-car seats, a hotel in Ella and the Nine Arch Bridge walk.","முன்பதிவு செய்யப்பட்ட பார்வைப் பெட்டி இருக்கைகள், எல்லவில் ஹோட்டல் மற்றும் ஒன்பது வளைவுப் பாலம் நடை."
+offers.items.@rail-ella.price,Home page,Offers,Offers › Kandy to Ella by Train › Price,"LKR 27,500 per person","ஒருவருக்கு ரூ. 27,500"
+cta.heading,Home page,Call-to-action band,Call-to-action band › Band heading,Ready for the hills?,மலைகளுக்குத் தயாரா?
+cta.text,Home page,Call-to-action band,Call-to-action band › Band text,Tell us your dates and we will build a trip around them.,"உங்கள் தேதிகளைச் சொல்லுங்கள், அவற்றைச் சுற்றி ஒரு பயணத்தை உருவாக்குவோம்."
+cta.button,Home page,Call-to-action band,Call-to-action band › Band button,Plan my trip,என் பயணத்தைத் திட்டமிடு
+about.title,About page,About page,About page › Page heading,About Hill Country Tea Tours,ஹில் கண்ட்ரி டீ டூர்ஸ் பற்றி
+about.intro,About page,About page,About page › Introduction,Family-run since 2009 and based in Nuwara Eliya.,"2009 முதல் குடும்பமாக நடத்தப்படுகிறது, நுவரெலியாவில் அமைந்துள்ளது."
+about.body,About page,About page,About page › Main text,"Our guides grew up among the tea estates. We keep our groups small, work with local bungalow owners, and plan every trip around the weather, the trains and the best views.","எங்கள் வழிகாட்டிகள் தேயிலைத் தோட்டங்களுக்கு இடையே வளர்ந்தவர்கள். குழுக்களைச் சிறியதாக வைத்திருக்கிறோம், உள்ளூர் பங்களா உரிமையாளர்களுடன் இணைந்து பணியாற்றுகிறோம், வானிலை, ரயில்கள் மற்றும் சிறந்த காட்சிகளைக் கொண்டு ஒவ்வொரு பயணத்தையும் திட்டமிடுகிறோம்."
+contact.heading,Home page,Contact details & enquiry form,Contact details & enquiry form › Section heading,Plan your hill-country trip,உங்கள் மலைநாட்டுப் பயணத்தைத் திட்டமிடுங்கள்
+contact.address,Home page,Contact details & enquiry form,Contact details & enquiry form › Address,"14 Lake Road, Nuwara Eliya, Sri Lanka","14 ஏரி வீதி, நுவரெலியா, இலங்கை"
+contact.formIntro,Home page,Contact details & enquiry form,Contact details & enquiry form › Form introduction,Tell us your dates and group size – we reply within one working day.,உங்கள் தேதிகளையும் குழு அளவையும் சொல்லுங்கள் – ஒரு வேலை நாளுக்குள் பதிலளிப்போம்.
+contact.formName,Home page,Contact details & enquiry form,Contact details & enquiry form › Form: name label,Your name,உங்கள் பெயர்
+contact.formEmail,Home page,Contact details & enquiry form,Contact details & enquiry form › Form: email label,Your email,உங்கள் மின்னஞ்சல்
+contact.formMessage,Home page,Contact details & enquiry form,Contact details & enquiry form › Form: message label,Your dates and questions,உங்கள் தேதிகளும் கேள்விகளும்
+contact.formSubmit,Home page,Contact details & enquiry form,Contact details & enquiry form › Form: send button,Send,அனுப்பு
+contact.formThanks,Home page,Contact details & enquiry form,Contact details & enquiry form › Form: thank-you message,Thank you! Our team will reply soon.,நன்றி! எங்கள் குழு விரைவில் பதிலளிக்கும்.
+footer.tagline,Every page,Footer,Footer › Footer text,Small-group tours in Sri Lanka’s tea country.,இலங்கையின் தேயிலை நாட்டில் சிறு குழுச் சுற்றுலாக்கள்.

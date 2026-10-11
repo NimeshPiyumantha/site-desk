@@ -1,0 +1,64 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    -webkit-font-smoothing: antialiased;
+    @apply text-ink;
+  }
+  /* A visible focus ring everywhere, for keyboard users. */
+  :where(a, button, input, select, textarea, [tabindex]):focus-visible {
+    @apply outline-none ring-2 ring-brand-ring ring-offset-2 ring-offset-white;
+  }
+  h1 { @apply text-2xl font-semibold tracking-[-0.01em]; }
+  h2 { @apply text-lg font-semibold; }
+}
+
+@layer components {
+  /* ---- buttons: one shape, four intents ---- */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium
+           transition-[background-color,border-color,box-shadow,transform] duration-150
+           active:translate-y-px disabled:pointer-events-none disabled:opacity-45;
+  }
+  .btn-primary { @apply btn bg-brand text-white shadow-sm hover:bg-brand-dark; }
+  .btn-secondary { @apply btn border border-surface-line bg-white text-ink shadow-sm hover:border-ink-faint hover:bg-surface-sunken; }
+  .btn-danger { @apply btn bg-stop text-white shadow-sm hover:brightness-110; }
+  .btn-ghost { @apply btn text-brand hover:bg-brand-light; }
+
+  /* ---- surfaces ---- */
+  .card { @apply rounded-xl border border-surface-line bg-white shadow-sm; }
+  .card-raised { @apply rounded-xl border border-surface-line bg-white shadow-md; }
+
+  /* ---- forms ---- */
+  .input {
+    @apply w-full rounded-lg border border-surface-line bg-white px-3 py-2.5 text-sm text-ink
+           placeholder:text-ink-faint focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20
+           disabled:bg-surface-sunken disabled:text-ink-soft;
+  }
+  .label { @apply mb-1.5 block text-sm font-medium text-ink; }
+  .hint { @apply mt-1.5 text-xs leading-relaxed text-ink-soft; }
+
+  /* ---- status ---- */
+  .pill { @apply inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium; }
+  .pill-live { @apply pill bg-live-light text-live; }
+  .pill-draft { @apply pill bg-draft-light text-draft; }
+  .pill-stop { @apply pill bg-stop-light text-stop; }
+  .pill-quiet { @apply pill bg-surface-sunken text-ink-soft; }
+
+  /* A small round dot used next to a status word. */
+  .dot { @apply inline-block h-2 w-2 shrink-0 rounded-full; }
+
+  /* ---- navigation ---- */
+  .nav-link {
+    @apply flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-ink-soft
+           transition-colors hover:bg-surface-sunken hover:text-ink;
+  }
+  .nav-link-active { @apply bg-brand-light text-brand-dark hover:bg-brand-light hover:text-brand-dark; }
+
+  /* ---- page furniture ---- */
+  .page-title { @apply text-2xl font-semibold tracking-[-0.01em] text-ink; }
+  .page-lead { @apply mt-1 max-w-3xl text-sm leading-relaxed text-ink-soft; }
+  .section-title { @apply text-xs font-semibold uppercase tracking-[0.07em] text-ink-faint; }
+}
