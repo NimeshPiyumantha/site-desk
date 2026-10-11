@@ -6,9 +6,9 @@ import * as repo from "@/server/repo";
 export default async function SettingsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const u = await requireUser();
-  const site = repo.getSite(id)!;
-  const { content } = repo.getDraft(id);
-  const live = repo.getLiveRelease(site);
+  const site = (await repo.getSite(id))!;
+  const { content } = await repo.getDraft(id);
+  const live = await repo.getLiveRelease(site);
   return (
     <SettingsForm
       siteId={id}

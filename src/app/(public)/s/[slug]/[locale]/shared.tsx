@@ -10,7 +10,7 @@ async function origin() {
 }
 
 export async function publicMetadata(slug: string, locale: string, page: "home" | "about"): Promise<Metadata> {
-  const data = getPublicPage(slug, locale);
+  const data = await getPublicPage(slug, locale);
   // The website's own mark, served by /s/<slug>/icon – not SiteDesk's.
   const icons = { icon: [{ url: `/s/${slug}/icon`, type: "image/svg+xml" }] };
   if (!data?.localeOk) return { title: "Not found", icons, robots: { index: false } };
@@ -32,8 +32,8 @@ export async function publicMetadata(slug: string, locale: string, page: "home" 
   };
 }
 
-export function PublicPage({ slug, locale, page }: { slug: string; locale: string; page: "home" | "about" }) {
-  const data = getPublicPage(slug, locale);
+export async function PublicPage({ slug, locale, page }: { slug: string; locale: string; page: "home" | "about" }) {
+  const data = await getPublicPage(slug, locale);
   if (!data?.localeOk) notFound();
   return <SiteRenderer content={data.content} locale={locale} page={page} base={`/s/${slug}`} slug={slug} languages={data.languages} />;
 }

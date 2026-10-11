@@ -1,7 +1,8 @@
-import Database from "better-sqlite3";
 import fs from "node:fs";
 import path from "node:path";
+import { sqliteDriver } from "./driver-sqlite";
 import { seedDemo } from "./seed";
+import { txStore, type SqlConnection, type SqlDriver } from "./sql";
 
 /**
  * SQLite database (a single file in ./data). The schema is created – and the demo data seeded –
@@ -78,35 +79,71 @@ CREATE INDEX IF NOT EXISTS idx_releases_site ON releases(site_id, number);
 CREATE INDEX IF NOT EXISTS idx_audit_site ON audit_log(site_id, at);
 `;
 
-// One connection per process. Stored on globalThis because Next.js can load this module more than
-// once (page rendering and server actions are bundled separately); two connections would not
-// always see each other's newest writes.
-const g = globalThis as unknown as { __sitedeskDb?: Database.Database | null };
+/** The one construct above that is not already valid in both dialects. */
+function schemaFor(dialect: "sqlite" | "postgres"): string {
+  return dialect === "postgres"
+    ? SCHEMA.replace("id INTEGER PRIMARY KEY AUTOINCREMENT", "id BIGSERIAL PRIMARY KEY")
+    : SCHEMA;
+}
 
-export function db(): Database.Database {
-  if (g.__sitedeskDb) return g.__sitedeskDb;
+/**
+ * One driver per process, kept on globalThis because Next.js can load this module more than once
+ * (page rendering and server actions are bundled separately) and two connections would not always
+ * see each other's newest writes. The promise is stored, not the driver, so concurrent callers
+ * during start-up wait for one set-up rather than racing to seed twice.
+ */
+const g = globalThis as unknown as { __sitedeskDriver?: Promise<SqlDriver> | null };
+
+async function setUp(): Promise<SqlDriver> {
+  const url = process.env.DATABASE_URL?.trim();
+  const driver = url ? (await import("./driver-postgres")).postgresDriver(url) : sqliteDriver(prepareLocalDir());
+  await driver.exec(schemaFor(driver.dialect));
+  const count = await driver.get<{ n: number }>("SELECT COUNT(*) n FROM users");
+  if (Number(count?.n ?? 0) === 0) await seedDemo(driver);
+  return driver;
+}
+
+/** The SQLite file and the uploads directory both live in the data directory. */
+function prepareLocalDir(): string {
   fs.mkdirSync(DATA_DIR, { recursive: true });
   fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-  const fresh = !fs.existsSync(DB_FILE);
-  const conn = new Database(DB_FILE);
-  conn.pragma("journal_mode = WAL");
-  conn.pragma("foreign_keys = ON");
-  conn.pragma("busy_timeout = 5000");
-  conn.exec(SCHEMA);
-  g.__sitedeskDb = conn;
-  if (fresh || (conn.prepare("SELECT COUNT(*) n FROM users").get() as { n: number }).n === 0) {
-    seedDemo(conn);
-  }
-  return conn;
+  return DB_FILE;
 }
 
-export function closeDb() {
-  g.__sitedeskDb?.close();
-  g.__sitedeskDb = null;
+export function db(): Promise<SqlDriver> {
+  g.__sitedeskDriver ??= setUp();
+  return g.__sitedeskDriver;
 }
 
+/**
+ * The connection a query should use: the one holding the current transaction if there is one,
+ * otherwise the driver itself.
+ */
+export async function conn(): Promise<SqlConnection> {
+  return txStore.getStore() ?? (await db());
+}
+
+/** Runs `fn` inside a transaction. Nested calls join the outer one as a savepoint. */
+export async function transaction<T>(fn: () => Promise<T>): Promise<T> {
+  return (await db()).transaction(fn);
+}
+
+export async function closeDb() {
+  const existing = g.__sitedeskDriver;
+  g.__sitedeskDriver = null;
+  if (existing) await (await existing).close();
+}
+
+/**
+ * Strictly increasing, so `created_at` orders rows reliably even when several are written in the
+ * same millisecond. Release and backup history used to lean on SQLite's rowid for that, which
+ * Postgres has no equivalent of.
+ */
+let lastNow = 0;
 export function now(): string {
-  return new Date().toISOString();
+  const t = Math.max(Date.now(), lastNow + 1);
+  lastNow = t;
+  return new Date(t).toISOString();
 }
 
 export function newId(prefix: string): string {

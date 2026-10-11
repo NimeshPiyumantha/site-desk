@@ -11,8 +11,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const h = await headers();
   const base = process.env.SITE_URL ?? `${h.get("x-forwarded-proto") ?? "http"}://${h.get("host") ?? "localhost:3000"}`;
   const out: MetadataRoute.Sitemap = [];
-  for (const site of repo.listAllLiveSites()) {
-    const live = repo.getLiveRelease(site);
+  for (const site of await repo.listAllLiveSites()) {
+    const live = await repo.getLiveRelease(site);
     if (!live) continue;
     const langs = live.content.settings.languages.filter((l) => l.public).map((l) => l.id);
     for (const page of ["", "/about"]) {

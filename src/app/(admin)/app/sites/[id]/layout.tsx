@@ -10,11 +10,11 @@ import { pendingChanges } from "@/server/services";
 export default async function SiteLayout({ children, params }: { children: React.ReactNode; params: Promise<{ id: string }> }) {
   const { id } = await params;
   const u = await requireUser();
-  const site = repo.getSite(id);
+  const site = await repo.getSite(id);
   if (!site || !can(u.actor, "site.view", site.client_id)) notFound();
-  const client = repo.getClient(site.client_id)!;
-  const { changes, draft } = pendingChanges(site);
-  const live = repo.getLiveRelease(site);
+  const client = (await repo.getClient(site.client_id))!;
+  const { changes, draft } = await pendingChanges(site);
+  const live = await repo.getLiveRelease(site);
   const role = u.actor.isAdmin ? "Operations admin" : u.actor.roles[site.client_id] === "publisher" ? "Reviewer / publisher" : "Content editor";
   return (
     <div className="space-y-4">

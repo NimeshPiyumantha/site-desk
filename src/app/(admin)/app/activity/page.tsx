@@ -13,11 +13,12 @@ const LABELS: Record<string, string> = {
 
 export default async function ActivityPage() {
   const u = await requireUser();
-  const sites = visibleSites(u.actor, u.workspaceId);
+  const sites = await visibleSites(u.actor, u.workspaceId);
   const siteName = new Map(sites.map((s) => [s.id, s.name]));
-  const releases = repo.recentReleases(sites.map((s) => s.id), 25);
-  const clientIds = visibleClientIds(u.actor, repo.listClients(u.workspaceId).map((c) => c.id));
-  const log = repo.listAudit(clientIds, undefined, 80, u.actor.isAdmin);
+  const releases = await repo.recentReleases(sites.map((s) => s.id), 25);
+  const clientIds = visibleClientIds(u.actor, (await repo.listClients(u.workspaceId)).map((c) => c.id));
+  const log = await repo.listAudit(clientIds, undefined, 80, u.actor.isAdmin);
+  const byId = new Map(await Promise.all(log.map(async (a) => [a.id, await repo.userName(a.user_id)] as const)));
   return (
     <div className="grid gap-6 lg:grid-cols-2">
       <section className="space-y-3">
@@ -46,7 +47,7 @@ export default async function ActivityPage() {
         <ul className="card divide-y text-sm">
           {log.map((a) => (
             <li key={a.id} className="p-3">
-              <span className="text-xs text-ink-soft" title={dateTime(a.at)}>{when(a.at)} · {repo.userName(a.user_id)} · {LABELS[a.action] ?? a.action}{a.site_id && siteName.get(a.site_id) ? ` · ${siteName.get(a.site_id)}` : ""}</span>
+              <span className="text-xs text-ink-soft" title={dateTime(a.at)}>{when(a.at)} · {byId.get(a.id)} · {LABELS[a.action] ?? a.action}{a.site_id && siteName.get(a.site_id) ? ` · ${siteName.get(a.site_id)}` : ""}</span>
               <br />
               {a.detail}
             </li>

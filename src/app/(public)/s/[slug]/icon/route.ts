@@ -18,8 +18,8 @@ const SAFE_COLOR = /^#(?:[0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
 export async function GET(_req: Request, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   db();
-  const site = repo.getSiteBySlug(slug);
-  const live = site ? repo.getLiveRelease(site) : null;
+  const site = await repo.getSiteBySlug(slug);
+  const live = site ? await repo.getLiveRelease(site) : null;
   if (!live) return new NextResponse("This website is not published.", { status: 404 });
 
   const brand = live.content.brand;

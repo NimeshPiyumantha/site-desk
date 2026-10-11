@@ -7,7 +7,7 @@ import { searchContent } from "@/server/services";
 export default async function SearchPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
   const u = await requireUser();
   const q = (await searchParams).q?.trim() ?? "";
-  const hits = q.length >= 2 ? searchContent(u.actor, u.workspaceId, q) : [];
+  const hits = q.length >= 2 ? await searchContent(u.actor, u.workspaceId, q) : [];
   const bySite = new Map<string, typeof hits>();
   for (const h of hits) bySite.set(h.siteId, [...(bySite.get(h.siteId) ?? []), h]);
 

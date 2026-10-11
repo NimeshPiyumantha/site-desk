@@ -8,9 +8,9 @@ import * as repo from "@/server/repo";
 /** Private preview of the DRAFT. Requires sign-in, is never indexed, and shows missing translations. */
 export async function Preview({ id, locale, page }: { id: string; locale: string; page: "home" | "about" }) {
   const u = await requireUser();
-  const site = repo.getSite(id);
+  const site = await repo.getSite(id);
   if (!site || !can(u.actor, "site.view", site.client_id)) notFound();
-  const { content, revision } = repo.getDraft(id);
+  const { content, revision } = await repo.getDraft(id);
   const langs = content.settings.languages;
   if (!langs.some((l) => l.id === locale)) notFound();
   const visible = langs.find((l) => l.id === locale)?.public;

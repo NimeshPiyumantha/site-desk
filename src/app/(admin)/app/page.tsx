@@ -10,13 +10,14 @@ import { siteSummary } from "@/server/services";
 
 export default async function Dashboard() {
   const u = await requireUser();
-  const clients = repo.listClients(u.workspaceId).filter((c) => visibleClientIds(u.actor, [c.id]).length);
+  const clients = (await repo.listClients(u.workspaceId)).filter((c) => visibleClientIds(u.actor, [c.id]).length);
   const createClients = clients.filter((c) => can(u.actor, "site.create", c.id)).map((c) => ({ id: c.id, name: c.name }));
-  const summaries = repo.listSitesForClients(clients.map((c) => c.id)).map((s) => siteSummary(u.actor, s));
+  const summaries = await Promise.all((await repo.listSitesForClients(clients.map((c) => c.id))).map((s) => siteSummary(u.actor, s)));
   const failed = summaries.filter((s) => s.failedAfterLive);
   const reviews = summaries.filter((s) => s.site.review_state === "ready" && s.canPublish);
+  const reviewRequesters = new Map(await Promise.all(reviews.map(async (s) => [s.site.id, await repo.userName(s.site.review_requested_by)] as const)));
   const checklists = summaries.filter((s) => s.site.show_checklist && !s.liveRelease);
-  const workspace = repo.getWorkspace(u.workspaceId);
+  const workspace = await repo.getWorkspace(u.workspaceId);
 
   return (
     <div className="space-y-8">
@@ -42,7 +43,7 @@ export default async function Dashboard() {
             {reviews.map((s) => (
               <li key={`r-${s.site.id}`} className="flex flex-wrap items-center gap-2 rounded-lg bg-amber-50 p-3 text-amber-900">
                 <span className="pill bg-amber-500 text-white">Waiting for review</span>
-                <strong>{s.site.name}</strong> – {repo.userName(s.site.review_requested_by)} sent {s.changes.length} change{s.changes.length === 1 ? "" : "s"}{s.site.review_note ? `: “${s.site.review_note}”` : ""}
+                <strong>{s.site.name}</strong> – {reviewRequesters.get(s.site.id)} sent {s.changes.length} change{s.changes.length === 1 ? "" : "s"}{s.site.review_note ? `: “${s.site.review_note}”` : ""}
                 <Link className="ml-auto underline" href={`/app/sites/${s.site.id}/publish`}>Review →</Link>
               </li>
             ))}

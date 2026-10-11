@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 /** Root layout for public websites: correct <html lang>, plus Google Analytics / Tag Manager when configured. */
 export default async function PublicLayout({ children, params }: { children: React.ReactNode; params: Promise<{ slug: string; locale: string }> }) {
   const { slug, locale } = await params;
-  const data = getPublicPage(slug, locale);
+  const data = await getPublicPage(slug, locale);
   const ga = data?.localeOk ? data.content.settings.gaId : "";
   const gtm = data?.localeOk ? data.content.settings.gtmId : "";
   return (

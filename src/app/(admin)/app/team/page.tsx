@@ -8,7 +8,7 @@ import { listTeam } from "@/server/services";
 export default async function TeamPage() {
   const u = await requireUser();
   if (!can(u.actor, "team.manage")) notFound();
-  const { members, clients } = listTeam(u.actor, u.workspaceId);
-  const ws = repo.getWorkspace(u.workspaceId)!;
+  const { members, clients } = await listTeam(u.actor, u.workspaceId);
+  const ws = (await repo.getWorkspace(u.workspaceId))!;
   return <TeamPanel members={members} clients={clients.map((c) => ({ id: c.id, name: c.name }))} workspaceName={ws.name} />;
 }

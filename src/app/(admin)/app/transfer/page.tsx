@@ -13,7 +13,7 @@ const STEPS = [
 export default async function TransferPage() {
   const u = await requireUser();
   if (!can(u.actor, "site.transfer")) notFound();
-  const ws = repo.getWorkspace(u.workspaceId)!;
+  const ws = (await repo.getWorkspace(u.workspaceId))!;
   return (
     <div className="space-y-6">
       <div>
@@ -33,7 +33,7 @@ export default async function TransferPage() {
         ))}
       </ol>
 
-      <ImportPackage clients={repo.listClients(u.workspaceId).map((c) => ({ id: c.id, name: c.name }))} workspaceName={ws.name} />
+      <ImportPackage clients={(await repo.listClients(u.workspaceId)).map((c) => ({ id: c.id, name: c.name }))} workspaceName={ws.name} />
     </div>
   );
 }

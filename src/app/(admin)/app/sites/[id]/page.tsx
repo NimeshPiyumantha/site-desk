@@ -14,12 +14,13 @@ export default async function Overview({ params, searchParams }: { params: Promi
   const { id } = await params;
   const { copied, launched } = await searchParams;
   const u = await requireUser();
-  const s = siteSummary(u.actor, repo.getSite(id)!);
+  const s = await siteSummary(u.actor, (await repo.getSite(id))!);
   const { site, liveRelease, failedAfterLive, changes } = s;
-  const clients = repo.listClients(u.workspaceId).filter((c) => can(u.actor, "site.create", c.id)).map((c) => ({ id: c.id, name: c.name }));
-  const activity = repo.listAudit([site.client_id], site.id, 8);
-  const leads = can(u.actor, "leads.view", site.client_id) ? repo.listLeads(site.id) : null;
-  const source = site.copied_from ? repo.getSite(site.copied_from) : null;
+  const clients = (await repo.listClients(u.workspaceId)).filter((c) => can(u.actor, "site.create", c.id)).map((c) => ({ id: c.id, name: c.name }));
+  const activity = await repo.listAudit([site.client_id], site.id, 8);
+  const activityAuthors = new Map(await Promise.all(activity.map(async (a) => [a.id, await repo.userName(a.user_id)] as const)));
+  const leads = can(u.actor, "leads.view", site.client_id) ? await repo.listLeads(site.id) : null;
+  const source = site.copied_from ? await repo.getSite(site.copied_from) : null;
   const liveLangs = liveRelease?.content.settings.languages.filter((l) => l.public).map((l) => l.id) ?? [];
 
   return (
@@ -36,7 +37,7 @@ export default async function Overview({ params, searchParams }: { params: Promi
             {can(u.actor, "site.publish", site.client_id) && <div className="mt-3"><RetryLaunchButton siteId={site.id} releaseId={failedAfterLive.id} /></div>}
           </section>
         )}
-        {site.show_checklist ? <Checklist siteId={site.id} items={checklistFor(site, s.draft)} /> : null}
+        {site.show_checklist ? <Checklist siteId={site.id} items={await checklistFor(site, s.draft)} /> : null}
 
         <section className="card p-5">
           <h2 className="font-semibold">Live website</h2>
@@ -58,9 +59,9 @@ export default async function Overview({ params, searchParams }: { params: Promi
           <h2 className="font-semibold">Unpublished changes</h2>
           <div className="mt-3">
             {liveRelease ? (
-              <ReviewBox siteId={site.id} state={site.review_state} requestedBy={repo.userName(site.review_requested_by)} note={site.review_note} pendingCount={changes.length} canPublish={can(u.actor, "site.publish", site.client_id)} canRequest={can(u.actor, "site.requestReview", site.client_id)} />
+              <ReviewBox siteId={site.id} state={site.review_state} requestedBy={await repo.userName(site.review_requested_by)} note={site.review_note} pendingCount={changes.length} canPublish={can(u.actor, "site.publish", site.client_id)} canRequest={can(u.actor, "site.requestReview", site.client_id)} />
             ) : (
-              <ReviewBox siteId={site.id} state={site.review_state} requestedBy={repo.userName(site.review_requested_by)} note={site.review_note} pendingCount={1} firstLaunch canPublish={can(u.actor, "site.publish", site.client_id)} canRequest={can(u.actor, "site.requestReview", site.client_id)} />
+              <ReviewBox siteId={site.id} state={site.review_state} requestedBy={await repo.userName(site.review_requested_by)} note={site.review_note} pendingCount={1} firstLaunch canPublish={can(u.actor, "site.publish", site.client_id)} canRequest={can(u.actor, "site.requestReview", site.client_id)} />
             )}
           </div>
           {changes.length > 0 && (
@@ -98,7 +99,7 @@ export default async function Overview({ params, searchParams }: { params: Promi
           <h2 className="font-semibold">Recent activity</h2>
           <ul className="mt-2 space-y-2 text-sm">
             {activity.map((a) => (
-              <li key={a.id}><span className="text-ink-soft">{when(a.at)} · {repo.userName(a.user_id)}</span><br />{a.detail}</li>
+              <li key={a.id}><span className="text-ink-soft">{when(a.at)} · {activityAuthors.get(a.id)}</span><br />{a.detail}</li>
             ))}
           </ul>
         </section>

@@ -12,11 +12,12 @@ const SOURCE: Record<string, string> = { publish: "Published", restore: "Went ba
 export default async function HistoryPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const u = await requireUser();
-  const site = repo.getSite(id)!;
-  const releases = repo.listReleases(id);
+  const site = (await repo.getSite(id))!;
+  const releases = await repo.listReleases(id);
   const live = releases.find((r) => r.status === "live");
   const canRestore = can(u.actor, "site.restore", site.client_id);
-  const drafts = repo.listDraftRevisions(id, 15);
+  const drafts = await repo.listDraftRevisions(id, 15);
+  const draftAuthors = new Map(await Promise.all(drafts.map(async (d) => [d.revision, await repo.userName(d.author_id)] as const)));
 
   return (
     <div className="grid gap-6 lg:grid-cols-3">
@@ -70,7 +71,7 @@ export default async function HistoryPage({ params }: { params: Promise<{ id: st
         <p className="text-sm text-ink-soft">Every save to the draft, with who made it. These are not live until published.</p>
         <ul className="card divide-y text-sm">
           {drafts.map((d) => (
-            <li key={d.revision} className="p-3"><span className="text-ink-soft">Save {d.revision} · {repo.userName(d.author_id)} · {when(d.created_at)}</span><br />{d.summary}</li>
+            <li key={d.revision} className="p-3"><span className="text-ink-soft">Save {d.revision} · {draftAuthors.get(d.revision)} · {when(d.created_at)}</span><br />{d.summary}</li>
           ))}
         </ul>
       </aside>

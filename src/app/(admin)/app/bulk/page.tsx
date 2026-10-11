@@ -7,9 +7,9 @@ import * as repo from "@/server/repo";
 
 export default async function BulkPage() {
   const u = await requireUser();
-  const sites = bulkSites(u.actor, u.workspaceId);
-  const views = sites.map((s) => {
-    const row = repo.getSite(s.id)!;
+  const sites = await bulkSites(u.actor, u.workspaceId);
+  const views = await Promise.all(sites.map(async (s) => {
+    const row = (await repo.getSite(s.id))!;
     return {
       id: s.id,
       name: s.name,
@@ -18,7 +18,7 @@ export default async function BulkPage() {
       offers: s.content.offers.items.map((o) => ({ code: o.code, title: o.title[s.content.settings.defaultLanguage] ?? o.code, price: o.price, title_l: o.title, description: o.description })),
       contact: { email: s.content.contact.email, phone: s.content.contact.phone, whatsapp: s.content.contact.whatsapp },
     };
-  });
+  }));
   const offers = offerCatalog(sites).map((o) => ({ code: o.code, title: o.title, siteIds: o.sites.map((x) => x.id) }));
   return (
     <div className="space-y-4">

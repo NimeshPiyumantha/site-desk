@@ -8,9 +8,9 @@ import { pendingChanges } from "@/server/services";
 export default async function PublishPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const u = await requireUser();
-  const site = repo.getSite(id)!;
-  const { changes, draft, live } = pendingChanges(site);
-  const liveRelease = repo.getLiveRelease(site);
+  const site = (await repo.getSite(id))!;
+  const { changes, draft, live } = await pendingChanges(site);
+  const liveRelease = await repo.getLiveRelease(site);
   return (
     <PublishPanel
       siteId={id}

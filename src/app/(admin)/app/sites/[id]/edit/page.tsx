@@ -7,7 +7,7 @@ export default async function EditPage({ params, searchParams }: { params: Promi
   const { id } = await params;
   const { section, lang } = await searchParams;
   const u = await requireUser();
-  const site = repo.getSite(id)!;
-  const { content, revision } = repo.getDraft(id);
+  const site = (await repo.getSite(id))!;
+  const { content, revision } = await repo.getDraft(id);
   return <Editor siteId={id} initial={content} revision={revision} canEdit={can(u.actor, "site.edit", site.client_id)} initialSection={section} initialLocale={lang} />;
 }

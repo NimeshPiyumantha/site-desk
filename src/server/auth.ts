@@ -40,7 +40,6 @@ export interface CurrentUser {
 }
 
 export async function currentUser(): Promise<CurrentUser | null> {
-  db();
   const jar = await cookies();
   const raw = jar.get(COOKIE)?.value;
   if (!raw) return null;
@@ -48,12 +47,11 @@ export async function currentUser(): Promise<CurrentUser | null> {
   const userId = raw.slice(0, idx);
   const sig = raw.slice(idx + 1);
   if (!userId || !sig || sig.length !== 64 || !crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(sign(userId)))) return null;
-  const user = repo.getUser(userId);
-  const actor = repo.getActor(userId);
+  const [user, actor] = await Promise.all([repo.getUser(userId), repo.getActor(userId)]);
   if (!user || !actor) return null;
   // Workspaces this person can see: all for admins, otherwise those containing their clients.
-  const all = repo.listWorkspaces();
-  const clientWs = new Set(repo.listAllClients().filter((c) => actor.isAdmin || actor.roles[c.id]).map((c) => c.workspace_id));
+  const [all, allClients] = await Promise.all([repo.listWorkspaces(), repo.listAllClients()]);
+  const clientWs = new Set(allClients.filter((c) => actor.isAdmin || actor.roles[c.id]).map((c) => c.workspace_id));
   const workspaces = actor.isAdmin ? all : all.filter((w) => clientWs.has(w.id));
   const wanted = jar.get(WS_COOKIE)?.value;
   const workspaceId = workspaces.find((w) => w.id === wanted)?.id ?? workspaces[0]?.id ?? "ws_main";

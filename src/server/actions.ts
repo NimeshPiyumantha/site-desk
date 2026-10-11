@@ -41,7 +41,7 @@ export async function loginAction(_: unknown, form: FormData): Promise<{ error?:
   db();
   const email = String(form.get("email") ?? "");
   const password = String(form.get("password") ?? "");
-  const user = repo.getUserByEmail(email);
+  const user = await repo.getUserByEmail(email);
   if (!user || !verifyPassword(password, user.password_hash)) return { error: "That email and password do not match. Demo password: demo1234" };
   await setSession(user.id);
   redirect("/app");
@@ -62,8 +62,8 @@ export async function switchWorkspaceAction(id: string) {
 
 export async function saveDraftAction(siteId: string, baseRevision: number, ops: EditOp[]) {
   const u = await requireUser();
-  return guard(() => {
-    const res = svc.saveDraft(u.actor, siteId, baseRevision, ops);
+  return await guard(async () => {
+    const res = await svc.saveDraft(u.actor, siteId, baseRevision, ops);
     if (res.ok) refreshSite(siteId);
     return res;
   });
@@ -71,12 +71,12 @@ export async function saveDraftAction(siteId: string, baseRevision: number, ops:
 
 export async function heartbeatAction(siteId: string) {
   const u = await requireUser();
-  return guard(() => {
-    svc.requireSite(u.actor, siteId, "site.view");
-    repo.touchPresence(siteId, u.user.id);
-    const site = repo.getSite(siteId)!;
-    const last = repo.listDraftRevisions(siteId, 1)[0];
-    return { ok: true as const, editors: repo.activeEditors(siteId, u.user.id).map((e) => e.name), revision: site.draft_revision, lastBy: last?.author_id === u.user.id ? null : repo.userName(last?.author_id ?? null) };
+  return await guard(async () => {
+    await svc.requireSite(u.actor, siteId, "site.view");
+    await repo.touchPresence(siteId, u.user.id);
+    const site = (await repo.getSite(siteId))!;
+    const last = (await repo.listDraftRevisions(siteId, 1))[0];
+    return { ok: true as const, editors: (await repo.activeEditors(siteId, u.user.id)).map((e) => e.name), revision: site.draft_revision, lastBy: last?.author_id === u.user.id ? null : await repo.userName(last?.author_id ?? null) };
   });
 }
 
@@ -97,8 +97,8 @@ export async function uploadImageAction(form: FormData): Promise<{ ok: true; url
 
 export async function requestReviewAction(siteId: string, note: string) {
   const u = await requireUser();
-  return guard(() => {
-    svc.requestReview(u.actor, siteId, note);
+  return await guard(async () => {
+    await svc.requestReview(u.actor, siteId, note);
     refreshSite(siteId);
     return { ok: true as const };
   });
@@ -106,8 +106,8 @@ export async function requestReviewAction(siteId: string, note: string) {
 
 export async function cancelReviewAction(siteId: string) {
   const u = await requireUser();
-  return guard(() => {
-    svc.cancelReview(u.actor, siteId);
+  return await guard(async () => {
+    await svc.cancelReview(u.actor, siteId);
     refreshSite(siteId);
     return { ok: true as const };
   });
@@ -115,17 +115,17 @@ export async function cancelReviewAction(siteId: string) {
 
 export async function publishAction(siteId: string, changeIds: string[] | "all", note: string) {
   const u = await requireUser();
-  return guard(() => {
-    const site = svc.requireSite(u.actor, siteId, "site.publish");
+  return await guard(async () => {
+    const site = await svc.requireSite(u.actor, siteId, "site.publish");
     let paths: string[] | undefined;
     if (changeIds !== "all") {
-      const { changes } = svc.pendingChanges(site);
+      const { changes } = await svc.pendingChanges(site);
       const selected = changes.filter((c) => changeIds.includes(c.id));
       if (selected.length !== changeIds.length) return { ok: false as const, kind: "nothing" as const, message: "The draft changed while you were reviewing. Please check the list again." };
       if (!selected.length) return { ok: false as const, kind: "nothing" as const, message: "Select at least one change to publish." };
       paths = selected.flatMap((c) => c.paths);
     }
-    const res = svc.publishSite(u.actor, siteId, { paths, note });
+    const res = await svc.publishSite(u.actor, siteId, { paths, note });
     refreshSite(siteId);
     return res;
   });
@@ -133,10 +133,10 @@ export async function publishAction(siteId: string, changeIds: string[] | "all",
 
 export async function retryLaunchAction(siteId: string, releaseId: string) {
   const u = await requireUser();
-  return guard(() => {
-    const failed = repo.getRelease(releaseId);
+  return await guard(async () => {
+    const failed = await repo.getRelease(releaseId);
     if (!failed || failed.site_id !== siteId || failed.status !== "failed") return { ok: false as const, kind: "nothing" as const, message: "That launch could not be found." };
-    const res = svc.publishSite(u.actor, siteId, { content: failed.content, note: failed.note, source: failed.source as "publish", changeSetId: failed.change_set_id, summaryOverride: failed.summary });
+    const res = await svc.publishSite(u.actor, siteId, { content: failed.content, note: failed.note, source: failed.source as "publish", changeSetId: failed.change_set_id, summaryOverride: failed.summary });
     refreshSite(siteId);
     return res;
   });
@@ -144,8 +144,8 @@ export async function retryLaunchAction(siteId: string, releaseId: string) {
 
 export async function restoreReleaseAction(siteId: string, releaseId: string, note: string) {
   const u = await requireUser();
-  return guard(() => {
-    const res = svc.restoreRelease(u.actor, siteId, releaseId, note);
+  return await guard(async () => {
+    const res = await svc.restoreRelease(u.actor, siteId, releaseId, note);
     refreshSite(siteId);
     return res;
   });
@@ -155,8 +155,8 @@ export async function restoreReleaseAction(siteId: string, releaseId: string, no
 
 export async function createBackupAction(siteId: string, label: string) {
   const u = await requireUser();
-  return guard(() => {
-    svc.createBackup(u.actor, siteId, label);
+  return await guard(async () => {
+    await svc.createBackup(u.actor, siteId, label);
     refreshSite(siteId);
     return { ok: true as const };
   });
@@ -164,8 +164,8 @@ export async function createBackupAction(siteId: string, label: string) {
 
 export async function restoreBackupAction(siteId: string, backupId: string) {
   const u = await requireUser();
-  return guard(() => {
-    const res = svc.restoreBackup(u.actor, siteId, backupId);
+  return await guard(async () => {
+    const res = await svc.restoreBackup(u.actor, siteId, backupId);
     refreshSite(siteId);
     return res;
   });
@@ -175,7 +175,7 @@ export async function restoreBackupAction(siteId: string, backupId: string) {
 
 export async function copySiteAction(sourceId: string, input: { name: string; slug: string; clientId?: string; newClientName?: string }) {
   const u = await requireUser();
-  const res = await guard(() => svc.copySite(u.actor, sourceId, { ...input, workspaceId: u.workspaceId }));
+  const res = await guard(async () => await svc.copySite(u.actor, sourceId, { ...input, workspaceId: u.workspaceId }));
   if (res.ok) {
     revalidatePath("/app");
     redirect(`/app/sites/${res.siteId}?copied=1`);
@@ -185,8 +185,8 @@ export async function copySiteAction(sourceId: string, input: { name: string; sl
 
 export async function tickChecklistAction(siteId: string, itemId: string, done: boolean) {
   const u = await requireUser();
-  return guard(() => {
-    svc.tickChecklist(u.actor, siteId, itemId, done);
+  return await guard(async () => {
+    await svc.tickChecklist(u.actor, siteId, itemId, done);
     refreshSite(siteId);
     return { ok: true as const };
   });
@@ -194,9 +194,9 @@ export async function tickChecklistAction(siteId: string, itemId: string, done: 
 
 export async function hideChecklistAction(siteId: string) {
   const u = await requireUser();
-  return guard(() => {
-    svc.requireSite(u.actor, siteId, "site.edit");
-    repo.updateSite(siteId, { show_checklist: 0 });
+  return await guard(async () => {
+    await svc.requireSite(u.actor, siteId, "site.edit");
+    await repo.updateSite(siteId, { show_checklist: 0 });
     refreshSite(siteId);
     return { ok: true as const };
   });
@@ -206,8 +206,8 @@ export async function hideChecklistAction(siteId: string) {
 
 export async function addLanguageAction(siteId: string, code: string) {
   const u = await requireUser();
-  return guard(() => {
-    const res = svc.addLanguage(u.actor, siteId, code);
+  return await guard(async () => {
+    const res = await svc.addLanguage(u.actor, siteId, code);
     refreshSite(siteId);
     return "error" in res ? res : { ok: res.ok, error: res.ok ? undefined : "Someone changed the languages at the same time – please try again." };
   });
@@ -215,8 +215,8 @@ export async function addLanguageAction(siteId: string, code: string) {
 
 export async function setLanguageVisibilityAction(siteId: string, code: string, visible: boolean) {
   const u = await requireUser();
-  return guard(() => {
-    const res = svc.setLanguageVisibility(u.actor, siteId, code, visible);
+  return await guard(async () => {
+    const res = await svc.setLanguageVisibility(u.actor, siteId, code, visible);
     refreshSite(siteId);
     return { ok: res.ok };
   });
@@ -224,13 +224,13 @@ export async function setLanguageVisibilityAction(siteId: string, code: string, 
 
 export async function translationPreviewAction(siteId: string, text: string, fileName: string, locale?: string) {
   const u = await requireUser();
-  return guard(() => svc.translationImportPlan(u.actor, siteId, text, fileName, locale));
+  return await guard(async () => await svc.translationImportPlan(u.actor, siteId, text, fileName, locale));
 }
 
 export async function applyTranslationAction(siteId: string, text: string, fileName: string, locale: string | undefined, expected: number) {
   const u = await requireUser();
-  return guard(() => {
-    const res = svc.applyTranslationImport(u.actor, siteId, text, fileName, locale, expected);
+  return await guard(async () => {
+    const res = await svc.applyTranslationImport(u.actor, siteId, text, fileName, locale, expected);
     refreshSite(siteId);
     return res;
   });
@@ -240,8 +240,8 @@ export async function applyTranslationAction(siteId: string, text: string, fileN
 
 export async function updateSettingsAction(siteId: string, input: { name: string; slug: string; notes: string; gaId: string; gtmId: string }) {
   const u = await requireUser();
-  return guard(() => {
-    const res = svc.updateSiteSettings(u.actor, siteId, input);
+  return await guard(async () => {
+    const res = await svc.updateSiteSettings(u.actor, siteId, input);
     refreshSite(siteId);
     return res;
   });
@@ -249,8 +249,8 @@ export async function updateSettingsAction(siteId: string, input: { name: string
 
 export async function simulateFailureAction(siteId: string, on: boolean) {
   const u = await requireUser();
-  return guard(() => {
-    svc.setSimulateFailure(u.actor, siteId, on);
+  return await guard(async () => {
+    await svc.setSimulateFailure(u.actor, siteId, on);
     refreshSite(siteId);
     return { ok: true as const };
   });
@@ -260,13 +260,13 @@ export async function simulateFailureAction(siteId: string, on: boolean) {
 
 export async function bulkPreviewAction(target: BulkTarget, siteIds: string[], locales: string[], value: string | Record<string, string>) {
   const u = await requireUser();
-  return guard(() => ({ ok: true as const, plan: svc.planBulk(u.actor, u.workspaceId, target, siteIds, locales, value) }));
+  return await guard(async () => ({ ok: true as const, plan: await svc.planBulk(u.actor, u.workspaceId, target, siteIds, locales, value) }));
 }
 
 export async function bulkApplyAction(input: { target: BulkTarget; siteIds: string[]; locales: string[]; value: string | Record<string, string>; publishNow: boolean; note: string; expected: string[] }) {
   const u = await requireUser();
-  return guard(() => {
-    const res = svc.applyBulk(u.actor, u.workspaceId, input);
+  return await guard(async () => {
+    const res = await svc.applyBulk(u.actor, u.workspaceId, input);
     revalidatePath("/app", "layout");
     return res;
   });
@@ -276,13 +276,13 @@ export async function bulkApplyAction(input: { target: BulkTarget; siteIds: stri
 
 export async function exportPackageAction(siteId: string, opts: { includeContact: boolean; includeAnalytics: boolean }) {
   const u = await requireUser();
-  return guard(() => ({ ok: true as const, ...svc.exportPackage(u.actor, siteId, opts) }));
+  return await guard(async () => ({ ok: true as const, ...(await svc.exportPackage(u.actor, siteId, opts)) }));
 }
 
 export async function importPackageAction(text: string, target: { clientId?: string; newClientName?: string }) {
   const u = await requireUser();
-  return guard(() => {
-    const res = svc.importPackage(u.actor, text, { ...target, workspaceId: u.workspaceId });
+  return await guard(async () => {
+    const res = await svc.importPackage(u.actor, text, { ...target, workspaceId: u.workspaceId });
     revalidatePath("/app", "layout");
     return res;
   });
@@ -291,24 +291,24 @@ export async function importPackageAction(text: string, target: { clientId?: str
 // ---------- public ----------
 
 export async function submitLeadAction(slug: string, input: { name: string; email: string; message: string; locale: string; website: string }) {
-  return svc.submitLead(slug, input);
+  return await svc.submitLead(slug, input);
 }
 
 // ---------- team & access ----------
 
 export async function addPersonAction(input: { name: string; email: string; title: string; password: string; isAdmin: boolean }) {
-  return guard(async () => {
+  return await guard(async () => {
     const u = await requireUser();
-    const res = svc.addPerson(u.actor, input);
+    const res = await svc.addPerson(u.actor, input);
     revalidatePath("/app/team");
     return res;
   });
 }
 
 export async function setClientAccessAction(userId: string, clientId: string, role: "editor" | "publisher" | "none") {
-  return guard(async () => {
+  return await guard(async () => {
     const u = await requireUser();
-    const res = svc.setClientAccess(u.actor, userId, clientId, role === "none" ? null : role);
+    const res = await svc.setClientAccess(u.actor, userId, clientId, role === "none" ? null : role);
     revalidatePath("/app/team");
     revalidatePath("/app");
     return res;
@@ -316,9 +316,9 @@ export async function setClientAccessAction(userId: string, clientId: string, ro
 }
 
 export async function setAdminAction(userId: string, isAdmin: boolean) {
-  return guard(async () => {
+  return await guard(async () => {
     const u = await requireUser();
-    const res = svc.setAdmin(u.actor, userId, isAdmin);
+    const res = await svc.setAdmin(u.actor, userId, isAdmin);
     revalidatePath("/app/team");
     revalidatePath("/app");
     return res;
@@ -327,8 +327,8 @@ export async function setAdminAction(userId: string, isAdmin: boolean) {
 
 /** The activity log as a spreadsheet, so it can be kept outside the app or sent to a client. */
 export async function exportActivityAction() {
-  return guard(async () => {
+  return await guard(async () => {
     const u = await requireUser();
-    return { ok: true as const, csv: svc.activityCsv(u.actor, u.workspaceId), fileName: `sitedesk-activity-${new Date().toISOString().slice(0, 10)}.csv` };
+    return { ok: true as const, csv: await svc.activityCsv(u.actor, u.workspaceId), fileName: `sitedesk-activity-${new Date().toISOString().slice(0, 10)}.csv` };
   });
 }
