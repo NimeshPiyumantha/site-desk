@@ -94,13 +94,47 @@ function schemaFor(dialect: "sqlite" | "postgres"): string {
  */
 const g = globalThis as unknown as { __sitedeskDriver?: Promise<SqlDriver> | null };
 
+/** Any constant will do; it only has to be the same in every copy of the app. */
+const SET_UP_LOCK = 7274110001;
+
 async function setUp(): Promise<SqlDriver> {
   const url = process.env.DATABASE_URL?.trim();
   const driver = url ? (await import("./driver-postgres")).postgresDriver(url) : sqliteDriver(prepareLocalDir());
+  try {
+    if (driver.dialect === "postgres") await initShared(driver);
+    else await initLocal(driver);
+    return driver;
+  } catch (e) {
+    // Leave nothing half-open behind; db() will let the next request try again.
+    await driver.close().catch(() => {});
+    throw e;
+  }
+}
+
+/**
+ * Creating the schema and seeding, where several copies of the app may start at once against the
+ * same database. Both have to happen under a lock: concurrent `CREATE TABLE IF NOT EXISTS` can
+ * still collide in the catalogue, and two seeders would each insert the demo rows. Whoever gets
+ * the lock does the work; the others wait and then find it already done.
+ */
+async function initShared(driver: SqlDriver) {
+  await driver.transaction(async () => {
+    const c = txStore.getStore() ?? driver;
+    await c.run(`SELECT pg_advisory_xact_lock(${SET_UP_LOCK})`);
+    await c.exec(schemaFor("postgres"));
+    if (await isEmpty(c)) await seedDemo(driver);
+  });
+}
+
+/** One file, one process: the transaction inside seedDemo is enough. */
+async function initLocal(driver: SqlDriver) {
   await driver.exec(schemaFor(driver.dialect));
-  const count = await driver.get<{ n: number }>("SELECT COUNT(*) n FROM users");
-  if (Number(count?.n ?? 0) === 0) await seedDemo(driver);
-  return driver;
+  if (await isEmpty(driver)) await seedDemo(driver);
+}
+
+async function isEmpty(c: SqlConnection): Promise<boolean> {
+  const count = await c.get<{ n: number }>("SELECT COUNT(*) n FROM users");
+  return Number(count?.n ?? 0) === 0;
 }
 
 /** The SQLite file and the uploads directory both live in the data directory. */
@@ -111,7 +145,12 @@ function prepareLocalDir(): string {
 }
 
 export function db(): Promise<SqlDriver> {
-  g.__sitedeskDriver ??= setUp();
+  // On failure the stored promise is cleared, so the next request starts over. Keeping a rejected
+  // promise would leave this copy of the app answering every later request with the same error.
+  g.__sitedeskDriver ??= setUp().catch((e) => {
+    g.__sitedeskDriver = null;
+    throw e;
+  });
   return g.__sitedeskDriver;
 }
 

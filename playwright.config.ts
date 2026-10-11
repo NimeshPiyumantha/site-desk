@@ -21,6 +21,8 @@ export default defineConfig({
     url: "http://localhost:3100/login",
     reuseExistingServer: false,
     timeout: 120_000,
-    env: { SITEDESK_DATA_DIR: "data/e2e" },
+    // Always the local file, never a hosted database: the tests rewrite the demo data, and a
+    // DATABASE_URL in .env would otherwise point them at it.
+    env: { SITEDESK_DATA_DIR: "data/e2e", DATABASE_URL: "" },
   },
 });
