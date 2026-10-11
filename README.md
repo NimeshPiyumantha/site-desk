@@ -1,5 +1,6 @@
 # SiteDesk — campaign website operations without developers
 
+
 SiteDesk lets a non-technical marketing / operations team **launch, adapt, translate, bulk-update, publish, investigate and recover** client campaign websites on their own.
 
 It is a working demonstration of the journey asked for in the assignment:
