@@ -12,12 +12,14 @@ It is a working demonstration of the journey asked for in the assignment:
 | **Source code** | <https://github.com/NimeshPiyumantha/site-desk> |
 | **Hosted demo** | <https://site-desk-psi.vercel.app/app> — a quick look only; read the note below |
 
-> **Run it locally for the real demo.** The hosted copy keeps its database on a temporary
-> serverless disk, so it starts again from fresh demo data whenever the instance recycles. Work you
-> publish, restore or edit there can disappear part-way through, and two people can land on
-> instances holding different state. The demonstration script in §3 depends on each step keeping
-> what the previous one did, so follow it on a local run — [§1](#1-run-it-about-2-minutes), two
-> commands.
+> **Run it locally for the real demo.** Signing in, browsing the websites and the public pages all
+> work on the hosted link, but **saved edits do not stick there**: it runs on a serverless host that
+> spreads requests over instances with separate temporary disks, so an edit is only visible to the
+> instance that stored it — measured at one page load in six. The demonstration script in §3 needs
+> each step to keep what the previous one did, so follow it on a local run
+> ([§1](#1-run-it-about-2-minutes), two commands) or on a host with a disk
+> ([§1](#hosting-it-so-the-whole-journey-works), `Dockerfile` and `fly.toml` included), where the
+> whole journey works.
 
 **Where to start:** [§1 Run it](#1-run-it-about-2-minutes) (two commands, demo accounts, example
 content) → [§3 Demonstration script](#3-demonstration-script-follow-without-a-walkthrough) (click-by-click,
@@ -60,6 +62,28 @@ npm test             # 25 unit tests on the business rules (fast, no browser)
 npm run test:e2e     # 13 end-to-end tests in a real browser (first run: npx playwright install chromium)
 npm run typecheck    # strict TypeScript
 ```
+
+### Hosting it so the whole journey works
+
+The database is one SQLite file and uploaded pictures are files beside it, so the app needs a disk
+that survives a restart and belongs to **one** running copy. Any container host with a volume does
+that, and the code needs no changes. `Dockerfile` and `fly.toml` are set up for it:
+
+```bash
+fly apps create <your-app>                        # then set `app` in fly.toml
+fly volumes create sitedesk_data --size 1 --region sin
+fly secrets set SITEDESK_SECRET=$(openssl rand -hex 32)
+fly deploy
+```
+
+Anywhere else (Render, Railway, a plain VM), the same two things are what matter: mount a volume
+and point `SITEDESK_DATA_DIR` at it, and set `SITEDESK_SECRET`.
+
+> **One copy only.** A SQLite file has a single writer and a volume attaches to one machine, so two
+> copies would keep separate databases and disagree about every edit. Do not scale the app to more
+> than one machine. This is also why **a serverless host cannot run the full journey**: it spreads
+> requests over instances that each get their own temporary disk, so a saved edit is only visible
+> to the instance that stored it — see [§5](#5-what-works-what-is-simulated-what-is-incomplete).
 
 ### What is in this folder
 
@@ -255,7 +279,7 @@ Each step lists where to click. The **? Help** button (top right) always shows h
 
 **Simulated:**
 * **Hosting / deployment.** The public site is served from the same app. The “upload to web host” step is simulated; a failure can be forced from *Settings → Demo*. A missing uploaded picture also fails the launch for real.
-* **Storage on the hosted demo.** <https://site-desk-psi.vercel.app/app> runs the same code, but a serverless host gives it no writable disk, so the database sits in `/tmp`: fresh demo data on every cold start, nothing kept, and separate instances holding separate state. Everything works, nothing persists. Persisting for real means moving the database to a hosted service and uploads to object storage — a porting job across `src/server/`, not a setting. Run locally (§1) for a demo that keeps what you do.
+* **Saving on the hosted demo.** <https://site-desk-psi.vercel.app/app> runs this same code, but a serverless host gives it no durable disk and spreads requests over instances that each get their own `/tmp`. Signing in, browsing and the public pages work; a saved edit is only visible to the instance that stored it, which measured as one page load in six, and nothing survives a cold start. A missing uploaded picture shows a placeholder instead of a broken image, and the launch check skips its “are the pictures there?” step, because on that host an absent file means nothing. **The fix is a disk, not a rewrite:** the same code runs the whole journey on any container host with a volume — see [§1](#hosting-it-so-the-whole-journey-works). Keeping it on a serverless host instead would mean moving the database to a hosted service and uploads to object storage, which turns ~110 synchronous functions in `src/server/` async, merge and publish logic included.
 * **Sign-in.** Email + password demo accounts with a signed session cookie. No password reset, SSO or 2FA.
 * **Custom domains.** Websites live under `/s/<address>`; real domains (e.g. `summerescape.lk`) are not mapped.
 

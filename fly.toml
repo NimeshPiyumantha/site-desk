@@ -1,0 +1,38 @@
+# Fly.io configuration for SiteDesk.
+#
+# Change `app` to the name you created, then:
+#   fly launch --no-deploy --copy-config   (or: fly apps create <name>)
+#   fly volumes create sitedesk_data --size 1 --region sin
+#   fly secrets set SITEDESK_SECRET=$(openssl rand -hex 32)
+#   fly deploy
+#
+# Deliberately one machine. The database is a single SQLite file on the volume, a volume attaches
+# to one machine, and two machines with separate volumes would disagree about every edit. Do not
+# run `fly scale count 2`.
+
+app = "sitedesk"
+primary_region = "sin"
+
+[build]
+
+[env]
+  SITEDESK_DATA_DIR = "/data"
+  PORT = "3000"
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  # Suspend rather than stop, so the machine comes back quickly and the volume stays attached.
+  auto_stop_machines = "suspend"
+  auto_start_machines = true
+  # Never zero: the app should be there when a reviewer opens the link.
+  min_machines_running = 1
+
+[[mounts]]
+  source = "sitedesk_data"
+  destination = "/data"
+
+[[vm]]
+  memory = "512mb"
+  cpu_kind = "shared"
+  cpus = 1
