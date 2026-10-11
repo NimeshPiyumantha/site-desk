@@ -60,6 +60,20 @@ npm run test:e2e     # 13 end-to-end tests in a real browser (first run: npx pla
 npm run typecheck    # strict TypeScript
 ```
 
+The end-to-end suite rewrites the demo data, so it empties its database first and uses its own
+SQLite file in `data/e2e` — never the one in `.env`, even when there is one. To run the same 13
+journeys against Postgres, name that database explicitly:
+
+```bash
+E2E_DATABASE_URL='postgresql://…' npm run test:e2e:pg      # bash/zsh
+$env:E2E_DATABASE_URL='postgresql://…'; npm run test:e2e:pg # PowerShell
+```
+
+> It **drops every table** in whatever you give it, so point it at a throwaway database. The
+> variable is deliberately not `DATABASE_URL`: choosing a database to wipe should be a decision,
+> not a side effect of having a `.env`. Expect it to take minutes rather than seconds — a hosted
+> database is a network round trip per query, and the timeouts allow for that.
+
 ### Using a hosted database instead (Supabase)
 
 Nothing above needs this: with no `.env` the app uses SQLite in `./data`. Point `DATABASE_URL` at

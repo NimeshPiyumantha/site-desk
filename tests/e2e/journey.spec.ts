@@ -279,6 +279,9 @@ test.describe.serial("connected journey", () => {
 
     // Taking the access away hides the client again.
     await row.getByLabel(/access to Summer Escape Travel/).selectOption("none");
+    // Wait for the save to be confirmed before the other person reloads: their page is fetched
+    // once, so reloading too early shows the old answer and no amount of retrying re-fetches it.
+    await expect(page.getByText(/Summer Escape Travel: no access/)).toBeVisible();
     await theirs.goto("/app");
     await expect(theirs.getByTestId("site-card-summer-escape-galle")).toHaveCount(0);
 

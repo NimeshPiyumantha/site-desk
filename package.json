@@ -11,7 +11,8 @@
     "reset-demo": "tsx scripts/reset-demo.ts",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:e2e:pg": "node scripts/e2e-postgres.mjs"
   },
   "engines": {
     "node": ">=20.9"
