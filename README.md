@@ -7,6 +7,18 @@ It is a working demonstration of the journey asked for in the assignment:
 
 **New campaign → adapt an existing website → add languages → update selected websites together → publish → investigate and recover from a mistake**, plus a **failed launch** and **colleagues making conflicting changes**.
 
+| | |
+|---|---|
+| **Source code** | <https://github.com/NimeshPiyumantha/site-desk> |
+| **Hosted demo** | <https://site-desk-psi.vercel.app/app> — a quick look only; read the note below |
+
+> **Run it locally for the real demo.** The hosted copy keeps its database on a temporary
+> serverless disk, so it starts again from fresh demo data whenever the instance recycles. Work you
+> publish, restore or edit there can disappear part-way through, and two people can land on
+> instances holding different state. The demonstration script in §3 depends on each step keeping
+> what the previous one did, so follow it on a local run — [§1](#1-run-it-about-2-minutes), two
+> commands.
+
 **Where to start:** [§1 Run it](#1-run-it-about-2-minutes) (two commands, demo accounts, example
 content) → [§3 Demonstration script](#3-demonstration-script-follow-without-a-walkthrough) (click-by-click,
 no walkthrough needed). [§2](#2-the-assignment-point-by-point--where-to-see-each-item) maps every
@@ -21,10 +33,14 @@ boundaries is [§5](#5-what-works-what-is-simulated-what-is-incomplete); testing
 Requirements: **Node.js 20.9 or newer** (tested on Node 22 and Node 24). No database server, no cloud account, no API keys, nothing to configure — the whole app, its database and the example websites run on one machine, offline.
 
 ```bash
+git clone https://github.com/NimeshPiyumantha/site-desk.git
+cd site-desk
 npm install
 npm run build
 npm start            # → http://localhost:3000
 ```
+
+(Working from the submitted ZIP instead? Skip the first two lines.)
 
 For development with hot reload use `npm run dev` instead of build/start.
 
@@ -228,6 +244,7 @@ Each step lists where to click. The **? Help** button (top right) always shows h
 | Private client information | Contact details, social media links, analytics IDs, enquiries, internal notes, team access, history and backups. Never copied to a new campaign; not in transfer packages unless chosen. | “Without carrying over private client information.” |
 | Recovering | Going back creates a **new version** (history is append-only) and also reverts the same fields in the draft. | Easy to undo the undo; prevents re-publishing the mistake. |
 | Hosting | The public site is served by the same app at `/s/<address>`. “Deployment” is a simulated step. | Keeps the demo self-contained; see §5. |
+| Where data is stored | One SQLite file plus uploaded pictures, under `./data` (override with `SITEDESK_DATA_DIR`). On a serverless host the project directory is read-only, so this falls back to `/tmp` — which is per-instance and wiped on recycle. | A single file needs no database server for a reviewer; the fallback is what lets the hosted demo run at all, at the cost of keeping nothing. |
 | Translations | CSV (opens in Excel / Google Sheets) generated from the site, or JSON. Rows matched by key; without a key, by unique main-language text. Main language is never overwritten by an import. | Clients work in spreadsheets; matching by key guarantees “correct page and correct place”. |
 | Pictures | Demo pictures are local SVG illustrations (works offline). Uploads (JPG/PNG/WebP/GIF/SVG, ≤6 MB) are stored in `data/uploads`. | No external dependencies for the reviewer. |
 
@@ -237,6 +254,7 @@ Each step lists where to click. The **? Help** button (top right) always shows h
 
 **Simulated:**
 * **Hosting / deployment.** The public site is served from the same app. The “upload to web host” step is simulated; a failure can be forced from *Settings → Demo*. A missing uploaded picture also fails the launch for real.
+* **Storage on the hosted demo.** <https://site-desk-psi.vercel.app/app> runs the same code, but a serverless host gives it no writable disk, so the database sits in `/tmp`: fresh demo data on every cold start, nothing kept, and separate instances holding separate state. Everything works, nothing persists. Persisting for real means moving the database to a hosted service and uploads to object storage — a porting job across `src/server/`, not a setting. Run locally (§1) for a demo that keeps what you do.
 * **Sign-in.** Email + password demo accounts with a signed session cookie. No password reset, SSO or 2FA.
 * **Custom domains.** Websites live under `/s/<address>`; real domains (e.g. `summerescape.lk`) are not mapped.
 
