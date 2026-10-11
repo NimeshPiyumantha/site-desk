@@ -6,8 +6,17 @@ import { seedDemo } from "./seed";
 /**
  * SQLite database (a single file in ./data). The schema is created – and the demo data seeded –
  * automatically the first time the app starts, so reviewers do not need any setup step.
+ *
+ * On a serverless host (Vercel) the project directory is read-only, so the database lives in /tmp
+ * instead. That disk is per-instance and temporary: demo data is re-seeded on a cold start and
+ * changes do not outlive the instance. Running locally – or pointing SITEDESK_DATA_DIR at a real
+ * volume – keeps everything.
  */
-export const DATA_DIR = process.env.SITEDESK_DATA_DIR ?? path.join(process.cwd(), "data");
+const DEFAULT_DATA_DIR = process.env.VERCEL
+  ? path.join("/tmp", "sitedesk")
+  : path.join(process.cwd(), "data");
+
+export const DATA_DIR = process.env.SITEDESK_DATA_DIR ?? DEFAULT_DATA_DIR;
 export const DB_FILE = path.join(DATA_DIR, "sitedesk.db");
 export const UPLOAD_DIR = path.join(DATA_DIR, "uploads");
 
