@@ -1,8 +1,8 @@
 node_modules
 .next
-data/*.db*
-data/uploads
-data/.secret
+# Generated on first start and rebuilt with demo data; nothing here is source.
+# The whole directory, so test data dirs (data/e2e) are covered too.
+data/
 test-results
 playwright-report
 *.tsbuildinfo
