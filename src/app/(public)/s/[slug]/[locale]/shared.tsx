@@ -11,7 +11,9 @@ async function origin() {
 
 export async function publicMetadata(slug: string, locale: string, page: "home" | "about"): Promise<Metadata> {
   const data = getPublicPage(slug, locale);
-  if (!data?.localeOk) return { title: "Not found", robots: { index: false } };
+  // The website's own mark, served by /s/<slug>/icon – not SiteDesk's.
+  const icons = { icon: [{ url: `/s/${slug}/icon`, type: "image/svg+xml" }] };
+  if (!data?.localeOk) return { title: "Not found", icons, robots: { index: false } };
   const c = data.content;
   const suffix = page === "about" ? "/about" : "";
   const base = await origin();
@@ -19,6 +21,7 @@ export async function publicMetadata(slug: string, locale: string, page: "home" 
   return {
     metadataBase: new URL(base),
     title,
+    icons,
     description: page === "about" ? c.about.intro[locale] : c.seo.description[locale],
     alternates: {
       canonical: `/s/${slug}/${locale}${suffix}`,
