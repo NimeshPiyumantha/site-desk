@@ -12,6 +12,9 @@ const WS_COOKIE = "sd_workspace";
 
 function secret(): string {
   if (process.env.SITEDESK_SECRET) return process.env.SITEDESK_SECRET;
+  // Fixed at build time on a serverless host, where the file below would differ per instance
+  // and every instance would reject the others' sessions. See next.config.mjs.
+  if (process.env.SITEDESK_SESSION_SECRET) return process.env.SITEDESK_SESSION_SECRET;
   const file = path.join(DATA_DIR, ".secret");
   fs.mkdirSync(DATA_DIR, { recursive: true });
   if (!fs.existsSync(file)) fs.writeFileSync(file, crypto.randomBytes(32).toString("hex"));
