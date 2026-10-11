@@ -80,6 +80,12 @@ export interface SitePackage {
   draft: SiteContent;
   live: SiteContent | null;
   includes: { contactDetails: boolean; analyticsIds: boolean };
+  /**
+   * Uploaded pictures the content refers to, as file name → base64. Without them a package only
+   * carries `/media/<id>` references and the website arrives with its pictures broken. Optional,
+   * so packages written before this existed still import.
+   */
+  files?: Record<string, string>;
 }
 
 export function buildPackage(
@@ -87,6 +93,7 @@ export function buildPackage(
   draft: SiteContent,
   live: SiteContent | null,
   opts: { includeContact: boolean; includeAnalytics: boolean },
+  files: Record<string, string> = {},
 ): SitePackage {
   const scrub = (c: SiteContent): SiteContent => {
     let out = clone(c);
@@ -110,6 +117,7 @@ export function buildPackage(
     draft: scrub(draft),
     live: live ? scrub(live) : null,
     includes: { contactDetails: opts.includeContact, analyticsIds: opts.includeAnalytics },
+    ...(Object.keys(files).length ? { files } : {}),
   };
 }
 
@@ -133,6 +141,8 @@ const packageSchema = z.object({
   draft: contentSchema,
   live: contentSchema.nullable(),
   includes: z.object({ contactDetails: z.boolean(), analyticsIds: z.boolean() }),
+  // Picture names are checked again before anything is written to disk; see writePackageFiles.
+  files: z.record(z.string()).optional(),
 });
 
 export function parsePackage(text: string): { ok: true; pkg: SitePackage } | { ok: false; error: string } {

@@ -166,7 +166,13 @@ function deployCheck(site: repo.SiteRow, next: SiteContent): repo.ReleaseError |
     };
   }
   const images = Object.values(flatten(next)).filter((v): v is string => typeof v === "string" && v.startsWith("/media/"));
-  const missing = images.filter((src) => !fs.existsSync(path.join(UPLOAD_DIR, path.basename(src))));
+  // Where uploads sit on a per-instance temporary disk, the instance running this check is often
+  // not the one that stored the file, so its absence says nothing about the picture really being
+  // gone and would fail launches that are fine. Only a durable disk can answer this.
+  const storageIsDurable = !process.env.VERCEL;
+  const missing = storageIsDurable
+    ? images.filter((src) => !fs.existsSync(path.join(UPLOAD_DIR, path.basename(src))))
+    : [];
   if (missing.length) {
     return {
       step: "Preparing pictures",
@@ -478,12 +484,59 @@ export function applyBulk(
 
 // ---------- transfer between workspaces ----------
 
+/** A plain picture file name and nothing else – no directories, no other kinds of file. */
+const MEDIA_NAME_RE = /^[A-Za-z0-9._-]+\.(jpe?g|png|webp|gif|svg)$/i;
+/** The same ceiling an upload has, so a package cannot smuggle in something larger. */
+const MAX_PACKAGE_FILE = 6 * 1024 * 1024;
+
+/** The uploaded pictures a package needs, as file name → base64. */
+function readPackageFiles(contents: Array<SiteContent | null>): Record<string, string> {
+  const names = new Set<string>();
+  for (const content of contents) {
+    if (!content) continue;
+    for (const value of Object.values(flatten(content))) {
+      if (typeof value === "string" && value.startsWith("/media/")) names.add(path.basename(value));
+    }
+  }
+  const out: Record<string, string> = {};
+  for (const name of names) {
+    if (!MEDIA_NAME_RE.test(name)) continue;
+    try {
+      const bytes = fs.readFileSync(path.join(UPLOAD_DIR, name));
+      if (bytes.byteLength <= MAX_PACKAGE_FILE) out[name] = bytes.toString("base64");
+    } catch {
+      // Not on this disk. The website still imports; that picture arrives as a placeholder.
+    }
+  }
+  return out;
+}
+
+/**
+ * Writes the pictures that came with a package.
+ *
+ * The names come from a file someone uploaded, so each one has to be a plain picture file name –
+ * anything carrying a directory, or any other kind of file, is ignored rather than trusted. An
+ * existing file is never overwritten: names are UUIDs, so a match is already the same picture.
+ */
+function writePackageFiles(files: Record<string, string> | undefined) {
+  if (!files) return;
+  fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+  for (const [givenName, base64] of Object.entries(files)) {
+    if (givenName !== path.basename(givenName) || !MEDIA_NAME_RE.test(givenName)) continue;
+    const bytes = Buffer.from(base64, "base64");
+    if (!bytes.byteLength || bytes.byteLength > MAX_PACKAGE_FILE) continue;
+    const full = path.join(UPLOAD_DIR, givenName);
+    if (!fs.existsSync(full)) fs.writeFileSync(full, bytes);
+  }
+}
+
 export function exportPackage(actor: Actor, siteId: string, opts: { includeContact: boolean; includeAnalytics: boolean }) {
   const site = requireSite(actor, siteId, "site.transfer");
   const { content: draft } = repo.getDraft(site.id);
   const live = repo.getLiveRelease(site)?.content ?? null;
   repo.audit(actor.id, site, "transfer.export", `Website package downloaded${opts.includeContact ? " (with contact details)" : ""}`);
-  return { fileName: `${site.slug}.sitedesk.json`, json: JSON.stringify(buildPackage({ name: site.name, slug: site.slug }, draft, live, opts), null, 2) };
+  const pkg = buildPackage({ name: site.name, slug: site.slug }, draft, live, opts, readPackageFiles([draft, live]));
+  return { fileName: `${site.slug}.sitedesk.json`, json: JSON.stringify(pkg, null, 2) };
 }
 
 export function importPackage(actor: Actor, text: string, target: { workspaceId: string; clientId?: string; newClientName?: string }): { ok: true; siteId: string; name: string } | { ok: false; error: string } {
@@ -491,6 +544,9 @@ export function importPackage(actor: Actor, text: string, target: { workspaceId:
   const parsed = parsePackage(text);
   if (!parsed.ok) return parsed;
   const { pkg } = parsed;
+  // Before the transaction: the pictures are files, so they are not part of it, and a website
+  // whose import then fails only leaves unreferenced bytes behind.
+  writePackageFiles(pkg.files);
   return tx(() => {
     let clientId = target.clientId;
     if (target.newClientName?.trim()) clientId = repo.createClient(target.workspaceId, target.newClientName.trim()).id;
