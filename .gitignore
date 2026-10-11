@@ -11,3 +11,6 @@ next-env.d.ts
 # Local secrets: a Supabase connection string, for instance.
 .env
 .env.local
+
+# Scratch test scripts
+tmp-*
