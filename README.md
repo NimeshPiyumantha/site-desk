@@ -63,6 +63,26 @@ npm run test:e2e     # 13 end-to-end tests in a real browser (first run: npx pla
 npm run typecheck    # strict TypeScript
 ```
 
+### Using a hosted database instead (Supabase)
+
+Nothing above needs this: with no `.env` the app uses SQLite in `./data`. Point `DATABASE_URL` at
+a Postgres database and it uses that instead, which is what lets a serverless host run the whole
+journey – every instance then reads and writes the same database.
+
+```bash
+# .env – never committed
+DATABASE_URL=postgresql://postgres.<project-ref>:<password>@aws-0-<region>.pooler.supabase.com:6543/postgres
+SITEDESK_SECRET=<32 random bytes, so sessions survive a redeploy>
+```
+
+Take the string from Supabase → **Connect** → **Transaction pooler** (port **6543**). Two reasons
+not to use the direct `db.<ref>.supabase.co` endpoint: it is IPv6-only, which many networks and
+serverless hosts cannot reach, and serverless opens far more connections than it allows.
+
+The schema is created and the demo data seeded on first start, exactly as with SQLite. Queries are
+written once and the Postgres driver rewrites the placeholders, so there is no second set of SQL to
+keep in step – see `src/server/sql.ts`.
+
 ### Hosting it so the whole journey works
 
 The database is one SQLite file and uploaded pictures are files beside it, so the app needs a disk
@@ -268,7 +288,8 @@ Each step lists where to click. The **? Help** button (top right) always shows h
 | Private client information | Contact details, social media links, analytics IDs, enquiries, internal notes, team access, history and backups. Never copied to a new campaign; not in transfer packages unless chosen. | “Without carrying over private client information.” |
 | Recovering | Going back creates a **new version** (history is append-only) and also reverts the same fields in the draft. | Easy to undo the undo; prevents re-publishing the mistake. |
 | Hosting | The public site is served by the same app at `/s/<address>`. “Deployment” is a simulated step. | Keeps the demo self-contained; see §5. |
-| Where data is stored | One SQLite file plus uploaded pictures, under `./data` (override with `SITEDESK_DATA_DIR`). On a serverless host the project directory is read-only, so this falls back to `/tmp` — which is per-instance and wiped on recycle. | A single file needs no database server for a reviewer; the fallback is what lets the hosted demo run at all, at the cost of keeping nothing. |
+| Where data is stored | One SQLite file plus uploaded pictures, under `./data` (override with `SITEDESK_DATA_DIR`). On a serverless host the project directory is read-only, so this falls back to `/tmp` — which is per-instance and wiped on recycle. Set `DATABASE_URL` to use a hosted Postgres (Supabase) instead, which every instance shares. | A single file needs no database server for a reviewer; the Postgres driver is what makes the app work on a host that does not give it a disk of its own. |
+| One set of SQL | Queries are written once in SQLite's style (`?` and `@name`) and the Postgres driver rewrites them to `$1 … $n` (`src/server/sql.ts`). Nested transactions use savepoints in both. | Two dialects of the same query drift apart; one does not. |
 | Staying signed in | Sessions are signed with a secret every copy of the app has to share. Locally that is a file in the data directory, so a restart keeps you signed in. On a serverless host, where instances do not share a disk, it is fixed during the build — so sessions end when a new deployment replaces the old one. Set **`SITEDESK_SECRET`** to pin it and they survive deployments. | A secret generated per instance means each instance rejects the others' sessions, which signs people out part-way through. |
 | Translations | CSV (opens in Excel / Google Sheets) generated from the site, or JSON. Rows matched by key; without a key, by unique main-language text. Main language is never overwritten by an import. | Clients work in spreadsheets; matching by key guarantees “correct page and correct place”. |
 | Pictures | Demo pictures are local SVG illustrations (works offline). Uploads (JPG/PNG/WebP/GIF/SVG, ≤6 MB) are stored in `data/uploads`. | No external dependencies for the reviewer. |
